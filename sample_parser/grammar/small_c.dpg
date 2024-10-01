@@ -1,0 +1,16 @@
+grammar_type combined;
+
+Typename
+: 'void'
+| 'int'
+| 'float'
+| 'bool'
+| 'char';
+
+If : 'if';
+
+Do : 'do';
+
+While : 'while'
+
+For : 'for';

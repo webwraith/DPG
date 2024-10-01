@@ -1,0 +1,9 @@
+{
+	"authors": [
+		"Matt"
+	],
+	"copyright": "Copyright © 2023, Matt",
+	"description": "A D Parser Generator that generates a LALR parser",
+	"license": "proprietary",
+	"name": "dpg"
+}

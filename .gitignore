@@ -13,3 +13,4 @@ dpg-test-*
 *.o
 *.obj
 *.lst
+notes.md

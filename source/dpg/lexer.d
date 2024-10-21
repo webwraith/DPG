@@ -11,30 +11,7 @@ import std.stdio;
 import std.uni;
 import std.algorithm.searching;
 
-struct Token {
-	string val;
-	size_t start, end;
-	TokenType type;
-}
-
-enum TokenType : string
-{
-	Unrecognised = "Unrecognised Token", // Used when none of the other types are valid
-
-	Identifier = "Identifier",
-	String = "String", //"" or ''
-	GroupOp = "GroupOp", //(
-	GroupCl = "GroupCl", //)
-	Selection = "Selection", //[
-	ZeroOrOne = "ZeroOrOne", //?
-	ZeroOrMore = "ZeroOrMore", //*
-	OneOrMore = "OneOrMore", //+
-	Or = "Or", //|
-	RuleSep = "RuleSep", // :
-	RuleEnd = "RuleEnd", // ;
-
-	EOF = "End of File" // end of file
-}
+import dpg.token;
 
 class Lexer {
 
@@ -45,6 +22,12 @@ class Lexer {
 	void skipWs() {
 		while (current < line.length && line[current].isWhite) {
 			current++;
+			if (current >= line.length) continue;
+			
+			if (line[current] == '\n') {
+				linenum++;
+				column_offs = current;
+			}
 		}
 	}
 
@@ -88,6 +71,9 @@ class Lexer {
 		
 		if (result.type != TokenType.EOF)
 			result.val = line[result.start..result.end];
+		
+		result.line = linenum+1;
+		result.column = result.start-column_offs+1;
 
 		return result;
 	}
@@ -123,4 +109,5 @@ class Lexer {
 
 	private string line;
 	private size_t current;
+	private size_t linenum, column_offs;
 }

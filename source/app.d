@@ -1,7 +1,7 @@
 import std.stdio;
 import dpg;
 
-string oldest_st = `num :
+string st = `num :
 	SIGN? ('#B'BINNUM|'#X'HEXNUM | '#O' OCTNUM | DECNUM('.' DECNUM)?);
 
 SIGN:
@@ -20,15 +20,10 @@ OCTNUM:
 	[01234567][01234567_]*;
 `;
 
-string old_st = `num:4`;
-
-string st = `num :
-	SIGN? ('#B'BINNUM|'#X'HEXNUM | '#O' OCTNUM | DECNUM('.' DECNUM)?);`;
 
 void main()
 {
-	Lexer l;
-	l = new Lexer(st);
+	Lexer l = new Lexer(st);
 
 	Token[] tokens;
 
@@ -38,6 +33,9 @@ void main()
 		tokens ~= t;
 		t=l.next;
 	}
+
+	Parser p = new Parser(tokens);
+	auto tree = p.parse();
 }
 
 void dumpToken(Token token) {

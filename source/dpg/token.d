@@ -22,6 +22,7 @@ enum TokenType : string
 	Or = "Or", //|
 	RuleSep = "RuleSep", // :
 	RuleEnd = "RuleEnd", // ;
+	Not = "Not",
 
 	EOF = "End of File" // end of file
 }

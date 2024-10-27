@@ -1,9 +1,26 @@
 module dpg.ast;
 
 import dpg.token;
+import std.string;
 
 abstract class AST {
 	AST[] children;
+	bool is_valid;
+
+	void addChild(AST child) {
+		children ~= child;
+	}
+
+	string build_string(int indent = 0) {
+		string s;
+		for (auto i = 0; i < indent; i++) 
+			s ~= "| ";
+		s ~= this.classinfo.toString ~ "\n";
+		foreach(child;children) {
+			child.build_string(indent+1);
+		}
+		return s;
+	}
 }
 
 class Root : AST {
@@ -13,31 +30,30 @@ class Root : AST {
 }
 
 class Rule : AST {
-	Token name, separator;
+	string name, separator;
 
-	void addBody(AST tree) {
+	void addBody(OrBlock tree) {
 		children ~= tree;
 	}
 }
 
 class OrBlock : AST {
-	enum Left = 0;
-	enum Right = 1;
-	Token or_sym;
+	alias left = children;
+	AST[] right;
 
-	AST left () {
-		return children[Left];
+	void addLeft(AST child) {
+		child.addChild;
 	}
 
-	AST right () {
-		return (children.length > 1) ? children[Right] : null;
-	}
+	void addRight(AST child) {
+		right ~= child;
+	}	
 }
 
 class SuffixBlock : AST {
-	Token suffix;
+	Token suffix, selection;
 }
 
-class GroupBlock : AST {
+class ParenBlock : AST {
 	Token open, close;
 }

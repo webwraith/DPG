@@ -29,13 +29,15 @@ void main()
 
 	Token t = l.next;
 	while (t.type != TokenType.EOF) {
-		t.dumpToken;
+		//t.dumpToken;
 		tokens ~= t;
 		t=l.next;
 	}
 
 	Parser p = new Parser(tokens);
 	auto tree = p.parse();
+
+	writeln(tree.build_string);
 }
 
 void dumpToken(Token token) {

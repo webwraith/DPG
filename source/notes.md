@@ -2,7 +2,7 @@ Notes
 ===
 
 The following is the BNF for EBNF, at least my subset of it:
-```
+```EBNF
 root:
 	rule*;
 
@@ -10,23 +10,18 @@ rule:
 	IDENTIFIER ':' or_block ';'
 
 or_block:
-	suffixed_block (OR or_block)?;
+	suffixed_block+ (OR suffixed_block+)*;
 
 suffixed_block:
-	(paren_block | selection) (OPT|NONEPLUS|ONEPLUS|NOT)?
-	| ε; // epsilon, or empty
+	(paren_block | SELECTION) (OPT|NONEPLUS|ONEPLUS|NOT)?
+	| ; // ε, epsilon, or empty
 
 paren_block:
 	OP_PAREN or_block CL_PAREN;
-
-/* - this is a token, not a parse rule
-selection:
-	OP_SELECT CHARS* CL_SELECT;
-*/
 ```
 
 With the lexical tokens being:
-```
+```EBNF
 OR: '|';
 OPT: '?';
 NONEPLUS: '*';
@@ -39,9 +34,23 @@ CL_SELECT: ']';
 CHARS: // any printable character that isn't ']'
 ```
 
+Attempting to collapse this into one rule gives us the following:
+
+```EBNF
+root:
+	(IDENTIFIER ':' ((paren_block | SELECTION) (OPT|NONEPLUS|ONEPLUS|NOT)?
+	| ) (OR ((paren_block | SELECTION) (OPT|NONEPLUS|ONEPLUS|NOT)?
+	| ))* ';')*;
+
+paren_block:
+	OP_PAREN or_block CL_PAREN;
+```
+
+As can be seen, this leaves us with a cyclic rule. I'm not sure if there is a way to remove this to collapse to a single rule.
+
 Example Grammar
 ---
-```
+```EBNF
 num :
 	SIGN? ('#B'BINNUM|'#X'HEXNUM | '#O' OCTNUM | DECNUM('.' DECNUM)?);
 

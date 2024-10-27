@@ -54,6 +54,7 @@ class Lexer {
 				case '|' : result.type = TokenType.Or;			current++;	break;
 				case ':' : result.type = TokenType.RuleSep;		current++;	break;
 				case ';' : result.type = TokenType.RuleEnd;		current++;	break;
+				case '!' : result.type = TokenType.Not;			current++;	break;
 				default : {
 					if (line[current].isAlpha || line[current] == '_')
 						readIdentifier(result);

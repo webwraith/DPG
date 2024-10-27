@@ -23,87 +23,170 @@ class Parser {
 
 	AST parse() {
 		Root root = new Root;
-		parse_root(root);
-		return root;
+		return (parse_root(root)) ? root : null;
 	}
 
-	private bool parse_root(ref Root tree) {
-		while (stream[index].type != TokenType.EOF) {
-			auto rule = new Rule;
-			if (parse_rule(rule))
+	
+
+	private {
+		bool parse_root(ref Root tree) {
+			debug entry("root");
+
+			while (stream[index].type != TokenType.EOF) {
+				auto rule = parse_rule;
+				if (rule is null) {
+					handleErrors();
+					clearErrors();
+					continue;
+				}
 				tree.addRule(rule);
-			else {
-				handleErrors();
-				clearErrors();
+			}
+
+			debug exit("root");
+			return (tree.children.length > 0);
+		}
+
+		Rule parse_rule() {
+			debug entry("rule");
+
+			Rule rule = new Rule;
+
+			if (!expect(TokenType.Identifier)) {
+				push_error("Expected identifier at start of rule");
+				index++;
+				return rule;
+			}
+			rule.name = stream[index].val;
+
+			if (!expect(TokenType.RuleSep)) {
+				push_error("Expected separator to split rule name and body");
+				return rule;
+			}
+			rule.separator = stream[index].val;
+
+			rule.addBody(parse_or_block);
+
+			if (!expect(TokenType.RuleEnd)) {
+				push_error("rule should always end with a semicolon");
+				return rule;
+			}
+
+			debug exit("rule");
+			rule.is_valid = true;
+			return rule;
+		}
+
+		OrBlock parse_or_block() {
+			OrBlock or = new OrBlock;
+			SuffixBlock suffix;
+
+			suffix = parse_suffix_block;
+			if (!suffix.is_valid) {
+				push_error("Expected suffix block");
+			}
+			while (suffix.is_valid) {
+				or.addLeft(suffix);
+				suffix = parse_suffix_block;
+			}
+
+			while (stream[index].type == TokenType.Or) {
+				index++;
+				suffix = parse_suffix_block;
+				while(suffix.is_valid) {
+					or.addRight(suffix);
+					suffix = parse_suffix_block;
+				}
+			}
+
+			return or;
+		}
+
+
+
+		SuffixBlock parse_suffix_block() {
+			SuffixBlock suffix = new SuffixBlock;
+			ParenBlock paren;
+
+			if (stream[index].type == TokenType.Selection) {
+				suffix.selection = stream[index];
+				index++;
+			}
+			else if ((paren = parse_paren_block).is_valid)
+				suffix.addChild(paren);
+			else { // the epsilon appears here
+				suffix.is_valid = true;
+				return suffix;
+			}
+
+			switch (stream[index].type) {
+				case TokenType.ZeroOrOne:
+				case TokenType.OneOrMore:
+				case TokenType.ZeroOrMore:
+				case TokenType.Not: suffix.suffix = stream[index]; index++; goto default;
+				default: suffix.is_valid = true;
+			}
+
+			return suffix;
+		}
+
+		ParenBlock parse_paren_block() {
+			ParenBlock paren = new ParenBlock;
+			OrBlock or = new OrBlock;
+
+			if (stream[index].type != TokenType.GroupOp)
+				return paren;
+			
+			or = parse_or_block;
+			if (!or.is_valid) {
+				push_error("Expected valid section with parentheses");
+				return paren;
+			}
+			paren.addChild(or);
+
+			if (stream[index].type != TokenType.GroupCl)
+				return paren;
+			
+			paren.is_valid = true;
+			return paren;
+		}
+
+
+
+
+		bool expect(TokenType type) {
+			return (stream[index].type == type);
+		}
+
+		void push_error(string error){
+			error_stack.insertFront(
+				new ParseError(error, stream[index].line, stream[index].column)
+			);
+		}
+
+		void handleErrors() {
+			foreach (ParseError error; error_stack)
+			{
+				writefln("[%s, %s] Error: %s", error.line, error.col, error.err);
 			}
 		}
 
-		return (tree.children.length > 0);
-	}
-
-	private bool parse_rule(ref Rule rule) {
-		if (expect(TokenType.Identifier, "Expected rule identifier to start rule"))
-			return false;
-		rule.name = stream[index];
-		index++;
-
-		if (expect (TokenType.RuleSep, "Expected ':' separator between name and body of rule"))
-			return false;
-		rule.separator = stream[index];
-		index++;
-
-		OrBlock block = new OrBlock;
-		parse_or_block(block);
-		if (block.children.length > 1)
-			rule.addBody(block);
-		else
-			rule.addBody(block.left);
-
-		return (expect(TokenType.RuleEnd, "Expected ';' to finish rule"));
-	}
-
-	private bool parse_or_block(ref OrBlock or_block) {
-		//
-		return false;
-	}
-
-	private bool parse_paren_block(ref GroupBlock group_block) {
-		if (expect(TokenType.GroupOp, "Expected '(' to start a group")) {
-			pop_error();
-			return false;
+		void pop_error() {
+			if (!error_stack.empty) error_stack.removeBack;
 		}
-
-		return true;
-	}
-
-	private bool expect(TokenType type, string error) {
-		if (stream[index].type != type) {
-			error_stack.insertFront(
-				new ParseError(error, stream[index].line, stream[index].column)
-				);
-			index++;
-			return false;
-		}
-		return true;
-	}
-
-	private void handleErrors() {
-		foreach (ParseError error; error_stack)
-		{
-			writefln("[%s, %s] Error: %s", error.line, error.col, error.err);
+		void clearErrors() {
+			error_stack.clear;
 		}
 	}
-
-	private void pop_error() {
-		if (!error_stack.empty) error_stack.removeBack;
-	}
-	private void clearErrors() {
-		error_stack.clear;
-	}
-
 	private {
 		Token[] stream;
 		size_t index;
+		size_t recursion_depth = 20, current_depth;
 		DList!ParseError error_stack;
+
+		debug string dbg_indent;
+		debug void indent() {dbg_indent =  " " ~ dbg_indent;}
+		debug void dedent() {dbg_indent = (dbg_indent.length) ? dbg_indent[0..$-1] : "";}
+		debug void entry(string s) {writeln(dbg_indent~s); indent;}
+		debug void exit(string s) {dedent; writeln(dbg_indent~s);}
 	}
 }
